@@ -10,15 +10,33 @@ app.use(express.json());
 
 app.post('/proxy-openai', async (req, res) => {
   try {
-    const response = await axios.post('https://api.openai.com/v1/chat/completions', req.body, {
+    const isStream = req.body.stream || req.headers['accept'] === 'text/event-stream';
+
+    const config = {
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
-    });
-    res.send(response.data);
+      responseType: isStream ? 'stream' : 'json',  // Stream or JSON response based on request
+    };
+
+    const response = await axios.post('https://api.openai.com/v1/chat/completions', req.body, config);
+
+    if (isStream) {
+      response.data.on('data', (chunk) => {
+        res.write(chunk);
+      });
+
+      response.data.on('end', () => {
+        res.end();
+      });
+    } else {
+      res.json(response.data);
+    }
+
   } catch (error) {
-    res.status(500).send(error.response.data);
+    // Send error message in JSON format
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -24,7 +24,7 @@ app.post('/proxy-openai', async (req, res) => {
 
     if (isStream) {
       response.data.on('data', (chunk) => {
-        res.send(chunk);
+        res.write(chunk);
       });
 
       response.data.on('end', () => {
